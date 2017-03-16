@@ -1,0 +1,353 @@
+<!doctype html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="Wolf.css"/>
+		<title>Game</title>
+	</head>
+	<body>
+		<div id="wolf"> 
+			<div id="capsalera">
+				<img src="imatges/one-night.jpg" style="width:200px; height:50px; margin-left:508px"  >
+			</div>
+			<div id ="usuari_info">
+				<div class="usuari_role">
+					<strong>Basic info: </strong></br>
+					<ul id="basic_info" class="li_name">
+						<li>Name: <%= name %> </li>
+						<li id="role">Role: None </li>
+						<li id="game_state">Waiting</li>
+					</ul>
+					
+					<!-- Rols en aquesta partida -->
+					
+					<div id="img_role" class="usuari_role" style="background-color: #E9DFEB; width:200px; height:300px">
+						
+					</div>
+					
+			
+				</div>
+				
+				<div id="roles_partida">
+					<strong>Roles in this game: </strong></br>
+					<div id="game_roles">
+					</div>
+				</div>
+				
+				
+			</div>
+			
+			<!-- Players in the game -->
+			<div id="box_chat_botons">
+				<div id=box_players>
+					<strong>Players:</strong>
+					<div id="players">
+							
+					</div>
+				</div>
+
+				<!-- Chat (Missatges) -->
+				<div id="chat">
+					<div id="chat_box">
+						<strong>Chat</strong></br>
+						<ul id="messages"></ul>
+					</div>
+					
+					<!-- Chat (Enviar) -->
+					<div id="box_chat">
+						<form action="" method="post" class="scroll_box">
+							  <input id="m" autocomplete="off" /><button>Send</button>
+						</form>
+					</div>
+				</div>
+
+				<!-- Buttons -->
+				<div id="box_botons">
+					<button id="start_game" onclick="start_game()">Start game</button>
+					<div id="end_game" style="display:none"></br></br><button onclick="end_game()" > End game</button></div>
+					<div id="restart_game" style="display:none"></br></br></br></br><button onclick="restart_game()" > Restart game</button></div>
+				</div>
+
+				<!-- Info/Pick buttons -->
+				<div id="box_picks">
+					<strong>Action</strong></br></br>
+					<div id="info">
+						If you have an action, it will appear here!
+					</div>
+				</div>
+			</div>
+		
+			<!-- Vots -->
+			<div id="box_vote">
+				<strong style="float:left">Vote</strong></br>
+				<div id="timer" style="float:left; margin-left:5px; background-color:white" >
+				</div>
+				</br>
+				<div id="votes">
+				
+				</div>
+			</div>	
+		</div>
+
+		<img src="night2.jpg"id="night_img" style="display:none; position: absolute; left: 450px; top: 200px; height:200px; width:200px; z-index: -1">
+
+		<!-- Fake Form -->
+		<div id="fake_form" style="display:none;">
+	    	<form id ="reload" action="game" method="POST">
+		      </br>Name : <input name="name" value="<%= name %>"></br></br>
+		      Password : <input  type="password" name="psw" value="<%= psw %>" /></br></br>
+		      <button>Sumbit</button>
+		    </form>
+	    </div>
+
+		<!-- Js -->
+	    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+	    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+	    <script>
+		//get variables
+		var my_name = '<%= name %>';
+		var table = $('#base');
+		
+		var time = 0;
+		var crono;
+		
+		//init
+		var socket = io();
+		
+		socket.emit('set_name', my_name);
+		
+		//state
+		var me;
+		var game_roles = [];
+		
+		start_game = function() {
+			socket.emit('start_game','');
+		}
+		
+		end_game = function() {
+			socket.emit('end_game','');
+		}
+		
+		restart_game = function() {
+			socket.emit('reset_game','');
+		}
+		
+		vote_player = function() {
+		
+			var val = $("input[type='radio'][name='player_vote']:checked").val();
+			
+			if(val != "none") {
+				socket.emit('vote_player', val);
+				$('#votes').html('');
+			}
+		}
+		
+		send = function(type) {
+		
+			var val = $("input[type='radio'][name='player']:checked").val();
+
+			if(type == 'troublemaker_action') {
+			
+				var val2 = $("input[type='radio'][name='player2']:checked").val();
+				
+				socket.emit(type, { p1: val, p2: val2});
+				
+			}
+			else {
+				socket.emit(type, val);
+			}
+			
+			$('#info').html('');
+
+		}
+		
+		timer = function() {
+			time++;
+			var t = display(time*1000);
+			$('#timer').text(t);
+		}
+		
+		function display(millisec) {
+			var seconds = (millisec / 1000).toFixed(0);
+			var minutes = Math.floor(seconds / 60);
+			var hours = "";
+			if (minutes > 59) {
+				hours = Math.floor(minutes / 60);
+				hours = (hours >= 10) ? hours : "0" + hours;
+				minutes = minutes - (hours * 60);
+				minutes = (minutes >= 10) ? minutes : "0" + minutes;
+			}
+
+			seconds = Math.floor(seconds % 60);
+			seconds = (seconds >= 10) ? seconds : "0" + seconds;
+			if (hours != "") {
+				return hours + ":" + minutes + ":" + seconds;
+			}
+			return minutes + ":" + seconds;
+		}
+		
+		//io functions
+		
+		//chat functions
+		$('form').submit(function(){
+			socket.emit('chat message', my_name + ': '+ $('#m').val());
+			$('#m').val('');
+						
+			return false;
+		});
+		
+		socket.on('chat message', function(msg){
+			$('#messages').append($('<li>').text(msg));
+			
+			var myDiv = document.getElementById("chat_box");
+			myDiv.scrollTop = myDiv.scrollHeight;
+		});
+		
+		//game functions
+		socket.on('game_roles', function(obj){
+
+			var html = '<ul style="margin-left:20px; margin-top:5px">';
+			for(i in obj) {
+				html += '<li>' + obj[i] + '</li>';
+			}
+			html += '</ul>';
+			
+			$('#game_roles').html(html);
+		});
+		
+		socket.on('role', function(msg) {
+			me = msg;
+
+			var img = '<img src="imatges/cartes/'+ msg +'.jpg" style="width:200px; height:300px">';
+			
+			$('#img_role').html(img);
+
+			$('#role').text('Role: ' + msg);
+			
+		});
+		
+		socket.on('names', function(obj) {
+
+			var html = '<table>';
+			
+			for(i in obj) {
+				html += '<tr>';
+					html += '<td>' + obj[i].name + '&#160&#160&#160&#160&#160 ' + obj[i].winrate + '</td>';
+					html += '<td></td>';
+				html += '</tr>';
+			}
+	
+			html += '</table>';
+			
+			$('#players').html(html);
+		});
+		
+		// action functions
+		socket.on('pick_action', function(obj) {
+
+			var html = '';
+		
+			for(i in obj.names) {
+				if(obj.names[i] != my_name)
+				html += '<input type="radio" name="player" value="'+ i +'">'+obj.names[i]+'</input></br>';
+			}
+			
+			if(obj.type == "seer_action") html += '<input type="radio" name="player" value="middle"> 2 middle cards </input></br>';
+			
+			if(obj.type == "troublemaker_action") {
+				html += '</br>';
+				for(i in obj.names) {
+					if(obj.names[i] != my_name)
+					html += '<input type="radio" name="player2" value="'+ i +'">'+obj.names[i]+'</input></br>';
+				}
+			}
+			
+			html += '</br><input type="radio" name="player" value="none" checked>Do nothing</input></br>';
+			
+			html += "<button onclick='send(\""  + obj.type + "\")'>Choose person</button></td>";
+			
+			$('#info').html(html);
+		});
+		
+		socket.on('start_game', function() {
+			$('#game_state').text('Night');
+			
+			/*document.body.style.color = 'white';
+			table.css('background-image', 'url("night.jpg")');*/
+
+			$('#night_img').fadeIn('fast');
+		
+			$('#start_game').hide();
+			$('#restart_game').hide();
+			$('#end_game').show();
+		});
+		
+		socket.on('day_starts', function(obj) {
+			$('#game_state').text('Day');
+			
+			/*document.body.style.color = 'black';
+			
+			table.fadeOut('slow', function(){
+				table.css('background-image', 'url("day.jpg")');
+				table.fadeIn('slow');
+			});*/
+
+			$('#night_img').fadeOut('slow');
+
+			var html = '';
+		
+			for(i in obj) {
+				if(obj[i] != my_name)
+				html += '<input type="radio" name="player_vote" value="'+ i +'">'+obj[i]+'</input></br>';
+			}
+			
+			html += '</br><input type="radio" name="player_vote" style="display:none" value="none" checked></input></br>';
+			
+			html += "<button onclick='vote_player()'>Vote person</button></td>";
+			
+			$('#votes').html(html);
+			
+			time = 0;
+			crono = setInterval(timer, 1000);
+			
+		});
+		
+		socket.on('end_game', function(obj) {
+			$('#restart_game').show();
+			$('#end_game').hide();
+			
+			var html = '<table>';
+			
+			for(i in obj) {
+			
+				var sty = "";
+				
+				if(obj[i].dead) sty = 'style="color:red"';
+			
+				html += '<tr>';
+					html += '<td ' + sty + '>' + obj[i].name + ': ' + obj[i].role + ' (' + obj[i].votes + ')</td>';
+				html += '</tr>';
+
+				if(obj[i].role == me) {
+					if(obj[i].win) $('#game_state').text('Victory');
+					else $('#game_state').text('Defeat');
+				}
+			}
+	
+			html += '</table>';
+			
+			$('#players').html(html);
+			
+			clearInterval(crono);
+		});
+		
+		socket.on('reset_game', function(obj) {
+			document.getElementById("reload").submit();
+		});
+		
+		socket.on('info_text', function(msg) {
+			$('#info').html(msg);
+		});
+		
+    </script>
+	</body>
+</html>

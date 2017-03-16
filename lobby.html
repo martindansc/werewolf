@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Game Config</title>
+  </head>
+  <body>
+
+  Game Roles!
+  <div id="roles">
+  
+  </div>
+  
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <script>
+
+    var game_roles = [ 'Seer', 'Werewolf', 'Werewolf', 'Troublemaker', 'Tanner','Mason','Mason', 'Robber', 'Hunter', 'Insomniac', 'Villager', 
+      'Minion', 'Drunk', 'Villager' , 'Villager', 'None'];
+
+    var html = '<form id="select_roles" method="post" action="/roles">';
+    for(i in game_roles) {
+      html+= '<input type="checkbox" name="game_roles" value='+game_roles[i]+'> '+game_roles[i]+'<br>';
+    }
+    html += '</br><input type="submit" value="Submit"><form>';
+    
+    $('#roles').html(html);
+  
+  </script>
+  </body>
+</html>
